@@ -1,0 +1,104 @@
+@import 'tailwindcss';
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    'PingFang SC',
+    'Microsoft YaHei',
+    sans-serif;
+}
+
+/* ---- Leaflet 标记与标签 ---- */
+
+.lodging-marker {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--marker-color, #2563eb);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.home-marker {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #0f766e;
+  color: #fff;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+}
+
+.lodging-label {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+}
+
+.lodging-label::before {
+  display: none;
+}
+
+.option-stop-label {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 0 5px;
+  font-size: 11px;
+  color: #334155;
+  box-shadow: none;
+  white-space: nowrap;
+}
+
+.option-stop-label::before {
+  display: none;
+}
+
+.option-label {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.option-label::before {
+  display: none;
+}
+
+.trip-popup .leaflet-popup-content {
+  margin: 10px 14px;
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+/* 图层面板中文适配 */
+.leaflet-control-layers {
+  font-size: 13px;
+}
