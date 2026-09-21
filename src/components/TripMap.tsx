@@ -3,7 +3,6 @@ import L from 'leaflet'
 import {
   ITINERARIES,
   PHASE_META,
-  PLACES,
   ROUTE_OPTIONS,
   type Coord,
   type DayPlan,
