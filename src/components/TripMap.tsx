@@ -131,7 +131,6 @@ export default function TripMap({ days, optionId, selectedDay, onSelectDay }: Tr
     // 未选中的方案：灰色虚线弱显示，便于对比
     for (const o of ROUTE_OPTIONS) {
       if (o.id === optionId) continue
-      if (o.id === 'A' && optionId === 'D') continue // D 的回程与 A 相同，不重复画
       const latlngs = GEOMETRY[`option-${o.id}`] ?? o.path
       L.polyline(latlngs, {
         color: '#94a3b8',
@@ -149,30 +148,6 @@ export default function TripMap({ days, optionId, selectedDay, onSelectDay }: Tr
       })
         .setLatLng(mid)
         .setContent(o.name)
-        .addTo(group)
-    }
-
-    // 方案 D 激活时：把被替换的主线 D6-D7（水上雅丹）画成虚线作对比
-    if (optionId === 'D') {
-      for (const legId of ['day-6', 'day-7']) {
-        const latlngs = GEOMETRY[legId]
-        if (!latlngs) continue
-        L.polyline(latlngs, {
-          color: '#94a3b8',
-          weight: 2,
-          dashArray: '6 8',
-          opacity: 0.55,
-          interactive: false,
-        }).addTo(group)
-      }
-      L.tooltip({
-        permanent: true,
-        direction: 'top',
-        className: 'option-label',
-        interactive: false,
-      })
-        .setLatLng(PLACES.waterYadan)
-        .setContent('主方案 D6-7 水上雅丹（本方案已替换）')
         .addTo(group)
     }
 
