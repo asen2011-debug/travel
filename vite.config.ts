@@ -4,6 +4,8 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // 相对路径构建，可部署到 GitHub Pages 的任意子路径（无需预知仓库名）
+  base: './',
   plugins: [react(), tailwindcss()],
   server: {
     host: '0.0.0.0',
