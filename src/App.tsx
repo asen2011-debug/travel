@@ -1,18 +1,31 @@
-import { useState } from 'react'
-import TripMap, { type OptionId } from './components/TripMap'
+import { useMemo, useState } from 'react'
+import TripMap from './components/TripMap'
 import ItineraryPanel from './components/ItineraryPanel'
 import OptionSwitch from './components/OptionSwitch'
-import { KEY_TIPS } from './data/itinerary'
+import { ITINERARIES, KEY_TIPS, ROUTE_OPTIONS, type OptionId } from './data/itinerary'
 
 export default function App() {
   const [optionId, setOptionId] = useState<OptionId>('A')
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
   const [panelOpen, setPanelOpen] = useState(false)
 
+  const days = useMemo(() => ITINERARIES[optionId], [optionId])
+  const option = ROUTE_OPTIONS.find((o) => o.id === optionId) ?? ROUTE_OPTIONS[0]
+
+  const handleOptionChange = (id: OptionId) => {
+    setOptionId(id)
+    setSelectedDay(null)
+  }
+
   const sidebar = (
     <>
-      <OptionSwitch optionId={optionId} onChange={setOptionId} />
-      <ItineraryPanel selectedDay={selectedDay} onSelectDay={setSelectedDay} optionId={optionId} />
+      <OptionSwitch optionId={optionId} onChange={handleOptionChange} />
+      <ItineraryPanel
+        days={days}
+        option={option}
+        selectedDay={selectedDay}
+        onSelectDay={setSelectedDay}
+      />
     </>
   )
 
@@ -43,7 +56,12 @@ export default function App() {
         </aside>
 
         <main className="relative min-w-0 flex-1">
-          <TripMap optionId={optionId} selectedDay={selectedDay} onSelectDay={setSelectedDay} />
+          <TripMap
+            days={days}
+            optionId={optionId}
+            selectedDay={selectedDay}
+            onSelectDay={setSelectedDay}
+          />
 
           <button
             onClick={() => setPanelOpen(true)}

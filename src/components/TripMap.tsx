@@ -1,42 +1,65 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import {
-  DAYS,
+  ITINERARIES,
   PHASE_META,
   PLACES,
   ROUTE_OPTIONS,
   type Coord,
   type DayPlan,
-  type RouteOption,
+  type OptionId,
 } from '../data/itinerary'
 import routeGeometry from '../data/routeGeometry.json'
 
 const GEOMETRY = routeGeometry as unknown as Record<string, Coord[]>
 
-export type OptionId = 'A' | 'B' | 'C' | 'D'
-
 interface TripMapProps {
+  days: DayPlan[]
   optionId: OptionId
   selectedDay: number | null
   onSelectDay: (day: number | null) => void
 }
 
-function dayLatLngs(day: DayPlan): Coord[] {
-  return GEOMETRY[`day-${day.day}`] ?? day.path
+interface LodgingGroup {
+  city: string
+  coord: Coord
+  days: DayPlan[]
 }
 
-function optionLatLngs(option: RouteOption): Coord[] {
-  return GEOMETRY[`option-${option.id}`] ?? option.path
+/** 同一城市的多个住宿日期合并为一个标记组 */
+function buildGroups(days: DayPlan[]): LodgingGroup[] {
+  const byCity = new Map<string, LodgingGroup>()
+  for (const day of days) {
+    let g = byCity.get(day.lodging)
+    if (!g) {
+      g = { city: day.lodging, coord: day.lodgingCoord, days: [] }
+      byCity.set(day.lodging, g)
+    }
+    g.days.push(day)
+  }
+  return [...byCity.values()]
 }
 
-function popupHtml(day: DayPlan): string {
+/** ["9/25","9/26"] -> "9/25·26"；["9/22","10/4"] -> "9/22·10/4" */
+function compactDates(days: DayPlan[]): string {
+  const parts: string[] = []
+  let prevMonth = ''
+  for (const d of days) {
+    const [m, dd] = d.date.split('/')
+    parts.push(m === prevMonth ? dd : d.date)
+    prevMonth = m
+  }
+  return parts.join('·')
+}
+
+function dayBlockHtml(day: DayPlan): string {
   const phase = PHASE_META[day.phase]
   const highlights = day.highlights.map((h) => `<li>${h}</li>`).join('')
   const note = day.note
     ? `<div style="margin-top:6px;color:#b45309">提示：${day.note}</div>`
     : ''
   return `
-    <div style="min-width:210px">
+    <div>
       <div style="font-weight:700;font-size:14px">D${day.day} · ${day.date} ${day.weekday}${day.holiday ? ` · ${day.holiday}` : ''}</div>
       <div style="margin:2px 0;color:${phase.color};font-weight:600">${phase.label}｜住：${day.lodging}</div>
       <div style="color:#64748b">${day.title} · ${day.mileageKm}km / 约${day.driveHours}h</div>
@@ -45,9 +68,12 @@ function popupHtml(day: DayPlan): string {
     </div>`
 }
 
-const ALL_POINTS: Coord[] = [...DAYS.flatMap((d) => d.path), ...ROUTE_OPTIONS[0].path]
+function groupPopupHtml(g: LodgingGroup): string {
+  const sep = '<hr style="border:none;border-top:1px solid #e2e8f0;margin:8px 0">'
+  return `<div style="min-width:220px">${g.days.map(dayBlockHtml).join(sep)}</div>`
+}
 
-export default function TripMap({ optionId, selectedDay, onSelectDay }: TripMapProps) {
+export default function TripMap({ days, optionId, selectedDay, onSelectDay }: TripMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const groupRef = useRef<L.LayerGroup | null>(null)
@@ -78,7 +104,8 @@ export default function TripMap({ optionId, selectedDay, onSelectDay }: TripMapP
       .addTo(map)
     L.control.scale({ position: 'bottomright' }).addTo(map)
 
-    map.fitBounds(L.latLngBounds(ALL_POINTS), { padding: [30, 30] })
+    const allPoints = ITINERARIES.A.flatMap((d) => GEOMETRY[d.legId] ?? d.path)
+    map.fitBounds(L.latLngBounds(allPoints), { padding: [30, 30] })
 
     const group = L.layerGroup().addTo(map)
     groupRef.current = group
@@ -99,16 +126,13 @@ export default function TripMap({ optionId, selectedDay, onSelectDay }: TripMapP
 
     group.clearLayers()
     markersRef.current = {}
-
-    const option = ROUTE_OPTIONS.find((o) => o.id === optionId) ?? ROUTE_OPTIONS[0]
-    const returnDaysVisible = optionId === 'A' || optionId === 'D'
     const bounds: Coord[] = []
 
     // 未选中的方案：灰色虚线弱显示，便于对比
     for (const o of ROUTE_OPTIONS) {
       if (o.id === optionId) continue
-      if (o.id === 'A' && returnDaysVisible) continue
-      const latlngs = optionLatLngs(o)
+      if (o.id === 'A' && optionId === 'D') continue // D 的回程与 A 相同，不重复画
+      const latlngs = GEOMETRY[`option-${o.id}`] ?? o.path
       L.polyline(latlngs, {
         color: '#94a3b8',
         weight: 2,
@@ -117,40 +141,47 @@ export default function TripMap({ optionId, selectedDay, onSelectDay }: TripMapP
         interactive: false,
       }).addTo(group)
       const mid = latlngs[Math.floor(latlngs.length / 2)]
-      L.tooltip({ permanent: true, direction: 'center', className: 'option-label', interactive: false })
+      L.tooltip({
+        permanent: true,
+        direction: 'center',
+        className: 'option-label',
+        interactive: false,
+      })
         .setLatLng(mid)
         .setContent(o.name)
         .addTo(group)
     }
 
-    // 起点（家）
-    L.marker(PLACES.home, {
-      icon: L.divIcon({
-        className: '',
-        html: '<div class="home-marker">家</div>',
-        iconSize: [30, 30],
-        iconAnchor: [15, 15],
-      }),
-    })
-      .bindTooltip('家 · 获嘉县亢村镇', {
+    // 方案 D 激活时：把被替换的主线 D6-D7（水上雅丹）画成虚线作对比
+    if (optionId === 'D') {
+      for (const legId of ['day-6', 'day-7']) {
+        const latlngs = GEOMETRY[legId]
+        if (!latlngs) continue
+        L.polyline(latlngs, {
+          color: '#94a3b8',
+          weight: 2,
+          dashArray: '6 8',
+          opacity: 0.55,
+          interactive: false,
+        }).addTo(group)
+      }
+      L.tooltip({
         permanent: true,
-        direction: 'bottom',
-        offset: [0, 16],
-        className: 'lodging-label',
+        direction: 'top',
+        className: 'option-label',
+        interactive: false,
       })
-      .addTo(group)
+        .setLatLng(PLACES.waterYadan)
+        .setContent('主方案 D6-7 水上雅丹（本方案已替换）')
+        .addTo(group)
+    }
 
-    // 逐日主线路段 + 住宿点
-    const seenLodging = new Map<string, number>()
-    for (const day of DAYS) {
-      if (day.phase === 'return' && !returnDaysVisible) continue
-      if (optionId === 'D' && option.replacesDays?.includes(day.day)) continue
-
-      const latlngs = dayLatLngs(day)
+    // 当前方案：逐日路段
+    for (const day of days) {
+      const latlngs = GEOMETRY[day.legId] ?? day.path
       bounds.push(...latlngs)
       const color = PHASE_META[day.phase].color
       const isSelected = selectedDay === day.day
-
       L.polyline(latlngs, {
         color,
         weight: isSelected ? 7 : 4,
@@ -158,63 +189,41 @@ export default function TripMap({ optionId, selectedDay, onSelectDay }: TripMapP
       })
         .on('click', () => onSelectDay(day.day))
         .addTo(group)
-        .bringToFront()
+    }
 
-      // 同一城市多晚住宿时错开标记
-      const count = seenLodging.get(day.lodging) ?? 0
-      seenLodging.set(day.lodging, count + 1)
-      const angle = count * 2.1
-      const r = 0.035 * count
-      const mCoord: Coord = [
-        day.lodgingCoord[0] + r * Math.sin(angle),
-        day.lodgingCoord[1] + r * Math.cos(angle),
-      ]
+    // 当前方案：住宿点（同一城市多晚合并为一个标记）
+    for (const g of buildGroups(days)) {
+      const isHome = g.city === '家'
+      const multi = g.days.length > 1
+      const containsSelected = g.days.some((d) => d.day === selectedDay)
+      const color = PHASE_META[g.days[0].phase].color
+      const html = isHome
+        ? `<div class="home-marker${containsSelected ? ' selected' : ''}">家</div>`
+        : `<div class="lodging-marker${multi ? ' lodging-marker-multi' : ''}${containsSelected ? ' selected' : ''}" style="--marker-color:${color}">${g.days.map((d) => d.day).join('·')}</div>`
+      const size: [number, number] = isHome ? [30, 30] : multi ? [42, 26] : [26, 26]
 
-      const marker = L.marker(mCoord, {
+      const marker = L.marker(g.coord, {
         icon: L.divIcon({
           className: '',
-          html: `<div class="lodging-marker" style="--marker-color:${color}">${day.day}</div>`,
-          iconSize: [26, 26],
-          iconAnchor: [13, 13],
+          html,
+          iconSize: size,
+          iconAnchor: [size[0] / 2, size[1] / 2],
         }),
       })
-        .bindTooltip(`${day.date} ${day.lodging}`, {
+        .bindTooltip(`${compactDates(g.days)} ${g.city}`, {
           permanent: true,
           direction: 'top',
           offset: [0, -15],
           className: 'lodging-label',
         })
-        .bindPopup(popupHtml(day), { className: 'trip-popup' })
-        .on('click', () => onSelectDay(day.day))
-        .addTo(group)
-      markersRef.current[day.day] = marker
-    }
-
-    // 选中的备选方案（B/C/D）：实线路径 + 途经点
-    if (optionId !== 'A') {
-      const latlngs = optionLatLngs(option)
-      bounds.push(...latlngs)
-      L.polyline(latlngs, {
-        color: optionId === 'D' ? PHASE_META.loop.color : PHASE_META.return.color,
-        weight: 5,
-        opacity: 0.9,
-      }).addTo(group)
-      for (const stop of option.stops) {
-        L.circleMarker(stop.coord, {
-          radius: 6,
-          color: '#0f766e',
-          weight: 2,
-          fillColor: '#fff',
-          fillOpacity: 1,
+        .bindPopup(groupPopupHtml(g), { className: 'trip-popup' })
+        .on('click', () => {
+          // 同城多晚：重复点击在各天之间循环切换
+          const idx = g.days.findIndex((d) => d.day === selectedDay)
+          onSelectDay(g.days[(idx + 1) % g.days.length].day)
         })
-          .bindTooltip(`${stop.date ? `${stop.date} ` : ''}${stop.name}`, {
-            permanent: true,
-            direction: 'top',
-            offset: [0, -8],
-            className: 'option-stop-label',
-          })
-          .addTo(group)
-      }
+        .addTo(group)
+      for (const d of g.days) markersRef.current[d.day] = marker
     }
 
     // 切换方案时重新取景
@@ -222,17 +231,20 @@ export default function TripMap({ optionId, selectedDay, onSelectDay }: TripMapP
       prevOptionRef.current = optionId
       map.flyToBounds(L.latLngBounds(bounds), { padding: [40, 40] })
     }
-  }, [optionId, selectedDay, onSelectDay])
+  }, [days, optionId, selectedDay, onSelectDay])
 
   // 选中某天：飞行定位 + 打开弹窗
   useEffect(() => {
     const map = mapRef.current
     if (!map || selectedDay == null) return
-    const day = DAYS.find((d) => d.day === selectedDay)
+    const day = days.find((d) => d.day === selectedDay)
     if (!day) return
-    map.flyToBounds(L.latLngBounds(dayLatLngs(day)), { padding: [60, 60], maxZoom: 9 })
+    map.flyToBounds(L.latLngBounds(GEOMETRY[day.legId] ?? day.path), {
+      padding: [60, 60],
+      maxZoom: 9,
+    })
     markersRef.current[selectedDay]?.openPopup()
-  }, [selectedDay])
+  }, [selectedDay, days])
 
   return (
     <div className="relative h-full w-full">

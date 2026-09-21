@@ -1,7 +1,7 @@
 // 构建期调用 OSRM 公共接口，把每天的行程路径贴到真实公路上。
 // 结果写入 src/data/routeGeometry.json；个别路段失败时前端回退为直线连线。
 import { writeFileSync } from 'node:fs'
-import { DAYS, ROUTE_OPTIONS } from '../src/data/itinerary.ts'
+import { ITINERARIES, ROUTE_OPTIONS } from '../src/data/itinerary.ts'
 
 const OSRM = 'https://router.project-osrm.org/route/v1/driving'
 
@@ -55,10 +55,14 @@ async function fetchRoute(path) {
   return simplify(pts)
 }
 
-const tasks = [
-  ...DAYS.map((d) => [`day-${d.day}`, d.path]),
-  ...ROUTE_OPTIONS.map((o) => [`option-${o.id}`, o.path]),
-]
+// 收集所有方案中出现的每一天路段（按 legId 去重）+ 各方案整体对比路径
+const legMap = new Map()
+for (const days of Object.values(ITINERARIES)) {
+  for (const d of days) {
+    if (!legMap.has(d.legId)) legMap.set(d.legId, d.path)
+  }
+}
+const tasks = [...legMap.entries(), ...ROUTE_OPTIONS.map((o) => [`option-${o.id}`, o.path])]
 
 const out = {}
 for (const [key, path] of tasks) {

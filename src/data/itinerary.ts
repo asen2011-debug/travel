@@ -2,8 +2,12 @@ export type Phase = 'outbound' | 'loop' | 'return'
 
 export type Coord = [number, number] // [lat, lng]
 
+export type OptionId = 'A' | 'B' | 'C' | 'D'
+
 export interface DayPlan {
   day: number
+  /** 路线几何的 key（routeGeometry.json），同一天可能被多个方案复用 */
+  legId: string
   date: string
   weekday: string
   holiday?: string
@@ -15,17 +19,12 @@ export interface DayPlan {
   highlights: string[]
   note?: string
   phase: Phase
+  /** 途经点（几何抓取失败时回退为直线连线） */
   path: Coord[]
 }
 
-export interface OptionStop {
-  name: string
-  coord: Coord
-  date?: string
-}
-
 export interface RouteOption {
-  id: 'A' | 'B' | 'C' | 'D'
+  id: OptionId
   name: string
   days: string
   distanceKm: number
@@ -33,11 +32,8 @@ export interface RouteOption {
   pros: string[]
   cons: string[]
   recommended?: boolean
-  /** 回程路径（从西宁到家）；方案 D 为环线改道路径 */
+  /** 对比虚线路径（从西宁到家；方案 D 为环线改道路径） */
   path: Coord[]
-  stops: OptionStop[]
-  /** 方案 D 专用：替换主线第几天 */
-  replacesDays?: number[]
 }
 
 export const PHASE_META: Record<Phase, { label: string; color: string }> = {
@@ -87,6 +83,7 @@ export const PLACES = {
   chengxian: [33.74, 105.72] as Coord, // 成县
   sanmenxia: [34.77, 111.2] as Coord,
   weinan: [34.5, 109.5] as Coord,
+  hanzhong: [33.07, 107.02] as Coord, // 汉中
   // 方案 B 川北线
   ruoergai: [33.58, 102.96] as Coord, // 若尔盖
   tangke: [33.79, 102.45] as Coord, // 唐克 九曲黄河第一湾
@@ -101,9 +98,11 @@ export const PLACES = {
 
 const P = PLACES
 
-export const DAYS: DayPlan[] = [
+/** 去程 + 环线（方案 A/B/C 共用，方案 D 替换 D6-D7） */
+const BASE_DAYS: DayPlan[] = [
   {
     day: 1,
+    legId: 'day-1',
     date: '9/21',
     weekday: '周一',
     title: '亢村 → 洛阳',
@@ -117,6 +116,7 @@ export const DAYS: DayPlan[] = [
   },
   {
     day: 2,
+    legId: 'day-2',
     date: '9/22',
     weekday: '周二',
     title: '洛阳 → 西安',
@@ -130,6 +130,7 @@ export const DAYS: DayPlan[] = [
   },
   {
     day: 3,
+    legId: 'day-3',
     date: '9/23',
     weekday: '周三',
     title: '西安 → 西宁',
@@ -144,6 +145,7 @@ export const DAYS: DayPlan[] = [
   },
   {
     day: 4,
+    legId: 'day-4',
     date: '9/24',
     weekday: '周四',
     title: '西宁 → 塔尔寺 → 青海湖 → 茶卡',
@@ -158,6 +160,7 @@ export const DAYS: DayPlan[] = [
   },
   {
     day: 5,
+    legId: 'day-5',
     date: '9/25',
     weekday: '周五',
     holiday: '中秋节',
@@ -173,6 +176,7 @@ export const DAYS: DayPlan[] = [
   },
   {
     day: 6,
+    legId: 'day-6',
     date: '9/26',
     weekday: '周六',
     title: 'G315 → 水上雅丹（往返）',
@@ -187,6 +191,7 @@ export const DAYS: DayPlan[] = [
   },
   {
     day: 7,
+    legId: 'day-7',
     date: '9/27',
     weekday: '周日',
     title: '大柴旦 → 当金山 → 敦煌',
@@ -200,6 +205,7 @@ export const DAYS: DayPlan[] = [
   },
   {
     day: 8,
+    legId: 'day-8',
     date: '9/28',
     weekday: '周一',
     title: '敦煌一日游',
@@ -214,6 +220,7 @@ export const DAYS: DayPlan[] = [
   },
   {
     day: 9,
+    legId: 'day-9',
     date: '9/29',
     weekday: '周二',
     title: '敦煌 → 嘉峪关 → 张掖',
@@ -227,6 +234,7 @@ export const DAYS: DayPlan[] = [
   },
   {
     day: 10,
+    legId: 'day-10',
     date: '9/30',
     weekday: '周三',
     title: '张掖 → 祁连草原 → 门源 → 西宁',
@@ -239,8 +247,13 @@ export const DAYS: DayPlan[] = [
     phase: 'loop',
     path: [P.zhangye, P.biandukou, P.ebao, P.menyuan, P.dabanshan, P.xining],
   },
+]
+
+/** 方案 A 回程：甘南线 */
+const RETURN_A: DayPlan[] = [
   {
     day: 11,
+    legId: 'day-11',
     date: '10/1',
     weekday: '周四',
     holiday: '国庆节',
@@ -256,6 +269,7 @@ export const DAYS: DayPlan[] = [
   },
   {
     day: 12,
+    legId: 'day-12',
     date: '10/2',
     weekday: '周五',
     title: '夏河 → 桑科草原 → 郎木寺 → 扎尕那',
@@ -270,6 +284,7 @@ export const DAYS: DayPlan[] = [
   },
   {
     day: 13,
+    legId: 'day-13',
     date: '10/3',
     weekday: '周六',
     title: '扎尕那 → 腊子口 → 陇南',
@@ -284,6 +299,7 @@ export const DAYS: DayPlan[] = [
   },
   {
     day: 14,
+    legId: 'day-14',
     date: '10/4',
     weekday: '周日',
     title: '陇南 → 天水 → 宝鸡 → 西安',
@@ -298,6 +314,7 @@ export const DAYS: DayPlan[] = [
   },
   {
     day: 15,
+    legId: 'day-15',
     date: '10/5',
     weekday: '周一',
     title: '西安 → 洛阳 → 获嘉',
@@ -312,11 +329,130 @@ export const DAYS: DayPlan[] = [
   },
 ]
 
+/** 方案 B 回程：川北若尔盖线（D11 与 A 相同，D15 与 A 相同） */
+const RETURN_B: DayPlan[] = [
+  RETURN_A[0],
+  {
+    day: 12,
+    legId: 'b-12',
+    date: '10/2',
+    weekday: '周五',
+    title: '夏河 → 郎木寺 → 若尔盖 → 唐克',
+    lodging: '唐克',
+    lodgingCoord: P.tangke,
+    mileageKm: 330,
+    driveHours: 6,
+    highlights: ['桑科草原', '郎木寺镇', '九曲黄河第一湾日落'],
+    note: '10 月初草原已枯黄，看苍茫感；唐克住宿条件一般',
+    phase: 'return',
+    path: [P.xiahe, P.sangke, P.gahai, P.langmusi, P.ruoergai, P.tangke],
+  },
+  {
+    day: 13,
+    legId: 'b-13',
+    date: '10/3',
+    weekday: '周六',
+    title: '唐克 → 红原 → 汶川 → 成都',
+    lodging: '成都',
+    lodgingCoord: P.chengdu,
+    mileageKm: 560,
+    driveHours: 9,
+    highlights: ['红原草原', '晚上成都吃火锅'],
+    note: '全天驾驶强度大，山区路段多，两人轮换',
+    phase: 'return',
+    path: [P.tangke, P.hongyuan, P.wenchuan, P.chengdu],
+  },
+  {
+    day: 14,
+    legId: 'b-14',
+    date: '10/4',
+    weekday: '周日',
+    title: '成都 → 汉中 → 西安',
+    lodging: '西安',
+    lodgingCoord: P.xian,
+    mileageKm: 720,
+    driveHours: 8.5,
+    highlights: ['京昆高速全程赶路（免费）'],
+    note: '8 点前出发，避开午后高峰',
+    phase: 'return',
+    path: [P.chengdu, P.hanzhong, P.xian],
+  },
+  RETURN_A[4],
+]
+
+/** 方案 C 回程：原路高速返回 */
+const RETURN_C: DayPlan[] = [
+  {
+    day: 11,
+    legId: 'c-11',
+    date: '10/1',
+    weekday: '周四',
+    holiday: '国庆节',
+    title: '西宁 → 兰州 → 西安',
+    lodging: '西安',
+    lodgingCoord: P.xian,
+    mileageKm: 850,
+    driveHours: 10,
+    highlights: ['全高速返程（国庆免费）', '中午兰州吃牛肉面'],
+    note: '单日 850km，两人每 2-3 小时轮换；早 7 点出发',
+    phase: 'return',
+    path: [P.xining, P.lanzhou, P.tianshui, P.baoji, P.xian],
+  },
+  {
+    ...RETURN_A[4],
+    day: 12,
+    date: '10/2',
+    weekday: '周五',
+    highlights: ['傍晚到家', '10/3-10/7 在家休息 5 天'],
+  },
+]
+
+/** 方案 D 环线改道：青藏线（替换 D6-D7） */
+const LOOP_VARIANT_D: DayPlan[] = [
+  {
+    day: 6,
+    legId: 'x-6',
+    date: '9/26',
+    weekday: '周六',
+    title: '大柴旦 → 格尔木 → 昆仑山口 → 可可西里 → 格尔木',
+    lodging: '格尔木',
+    lodgingCoord: P.golmud,
+    mileageKm: 530,
+    driveHours: 8,
+    highlights: ['昆仑山口（海拔4768m）', '可可西里', '藏羚羊'],
+    note: '海拔从 2780m 猛升至 4768m，高反风险大，带氧气瓶，量力而行',
+    phase: 'loop',
+    path: [P.dachaidan, P.golmud, P.kunlunPass, P.hohxil, P.kunlunPass, P.golmud],
+  },
+  {
+    day: 7,
+    legId: 'x-7',
+    date: '9/27',
+    weekday: '周日',
+    title: '格尔木 → 大柴旦 → 当金山 → 敦煌',
+    lodging: '敦煌',
+    lodgingCoord: P.dunhuang,
+    mileageKm: 550,
+    driveHours: 7,
+    highlights: ['柴达木盆地戈壁', '当金山口', '鸣沙山月牙泉日落'],
+    note: '本方案放弃了水上雅丹和东台吉乃尔湖',
+    phase: 'loop',
+    path: [P.golmud, P.dachaidan, P.dangjinshan, P.aksai, P.dunhuang],
+  },
+]
+
+export const ITINERARIES: Record<OptionId, DayPlan[]> = {
+  A: [...BASE_DAYS, ...RETURN_A],
+  B: [...BASE_DAYS, ...RETURN_B],
+  C: [...BASE_DAYS, ...RETURN_C],
+  D: [...BASE_DAYS.slice(0, 5), ...LOOP_VARIANT_D, ...BASE_DAYS.slice(7), ...RETURN_A],
+}
+
 export const ROUTE_OPTIONS: RouteOption[] = [
   {
     id: 'A',
     name: '方案 A · 甘南线',
-    days: '5 天',
+    days: '回程 5 天',
     distanceKm: 1900,
     recommended: true,
     description:
@@ -324,70 +460,53 @@ export const ROUTE_OPTIONS: RouteOption[] = [
     pros: ['风景类型与环线互补', '与去程零重复', '国庆期间甘南相对小众', '5 天从容，含 2 天纯赶路'],
     cons: ['扎尕那国庆住宿紧张需早订', '迭部—陇南段山路弯多'],
     path: [P.xining, P.tongren, P.xiahe, P.sangke, P.gahai, P.langmusi, P.diebu, P.zhagana, P.lazikou, P.dangchang, P.longnan, P.chengxian, P.tianshui, P.baoji, P.xian, P.luoyang, P.home],
-    stops: [
-      { name: '夏河', coord: P.xiahe, date: '10/1' },
-      { name: '扎尕那', coord: P.zhagana, date: '10/2' },
-      { name: '陇南', coord: P.longnan, date: '10/3' },
-      { name: '西安', coord: P.xian, date: '10/4' },
-      { name: '家', coord: P.home, date: '10/5' },
-    ],
   },
   {
     id: 'B',
     name: '方案 B · 川北若尔盖线',
-    days: '6-7 天',
-    distanceKm: 2600,
+    days: '回程 5 天',
+    distanceKm: 2400,
     description:
-      '经若尔盖草原、九曲黄河第一湾、成都返程。风景顶级但多约 700km、至少多 1-2 天，会压缩休息时间；10 月初草原已枯黄、花湖无花。本次不推荐，适合以后夏季专程走。',
-    pros: ['若尔盖草原、九曲黄河第一湾', '可顺路成都'],
-    cons: ['时间不够，压缩在家休息日', '10 月初草原枯黄、花湖无花', '多 700km 路程'],
-    path: [P.xining, P.tongren, P.xiahe, P.langmusi, P.tangke, P.ruoergai, P.hongyuan, P.wenchuan, P.chengdu, P.xian, P.luoyang, P.home],
-    stops: [
-      { name: '夏河', coord: P.xiahe },
-      { name: '郎木寺', coord: P.langmusi },
-      { name: '唐克', coord: P.tangke },
-      { name: '红原', coord: P.hongyuan },
-      { name: '成都', coord: P.chengdu },
-      { name: '西安', coord: P.xian },
-      { name: '家', coord: P.home },
-    ],
+      '经若尔盖草原、九曲黄河第一湾、成都返程。能顺路进成都，但回程多约 500km，且 D13/D14 两天驾驶强度很大；10 月初草原已枯黄、花湖无花。本次不推荐，适合以后夏季专程走。',
+    pros: ['若尔盖草原、九曲黄河第一湾', '可顺路成都吃火锅'],
+    cons: ['D13 约 560km 山路 + D14 约 720km 高速，强度大', '10 月初草原枯黄、花湖无花', '比方案 A 多约 500km'],
+    path: [P.xining, P.tongren, P.xiahe, P.langmusi, P.ruoergai, P.tangke, P.hongyuan, P.wenchuan, P.chengdu, P.hanzhong, P.xian, P.luoyang, P.home],
   },
   {
     id: 'C',
     name: '方案 C · 原路高速返回',
-    days: '2 天',
+    days: '回程 2 天',
     distanceKm: 1400,
     description:
-      '西宁 → 兰州 → 西安 → 家，全程高速 2 天到家。完全重复去程，仅作为恶劣天气、身体不适或时间失控时的兜底方案。',
-    pros: ['最快最省事', '全高速，路况好'],
-    cons: ['完全重复去程风景', '不符合"看不重复风景"的需求'],
+      '西宁 → 兰州 → 西安 → 家，全程高速 2 天到家，10/2 傍晚就能到家，可以休息 5 天。完全重复去程，作为恶劣天气、身体不适或时间失控时的兜底方案。',
+    pros: ['最快最省事，10/2 到家', '全高速，国庆免费', '在家休息长达 5 天'],
+    cons: ['完全重复去程风景', 'D11 单日 850km 强度大'],
     path: [P.xining, P.lanzhou, P.tianshui, P.baoji, P.xian, P.luoyang, P.home],
-    stops: [
-      { name: '兰州', coord: P.lanzhou },
-      { name: '西安', coord: P.xian },
-      { name: '家', coord: P.home },
-    ],
   },
   {
     id: 'D',
     name: '方案 D · 青藏线变体',
     days: '环线 D6-D7 改道',
-    distanceKm: 1000,
+    distanceKm: 1080,
     description:
-      '把环线第 6-7 天改为：大柴旦 → 格尔木 → 昆仑山口（4768m）→ 可可西里索南达杰保护站 → 格尔木 → 敦煌。适合对昆仑山/可可西里有执念的情况，回程仍走甘南线。',
-    pros: ['昆仑山、可可西里、藏羚羊', '体验 G109 青藏线'],
-    cons: ['放弃水上雅丹', '当天从 2800m 猛升至 4768m，高反风险大'],
+      '把环线第 6-7 天改为：大柴旦 → 格尔木 → 昆仑山口（4768m）→ 可可西里索南达杰保护站 → 格尔木 → 敦煌。适合对昆仑山/可可西里有执念的情况，回程仍走甘南线，总天数不变。',
+    pros: ['昆仑山、可可西里、藏羚羊', '体验 G109 青藏线', '总行程天数不变'],
+    cons: ['放弃水上雅丹和东台吉乃尔湖', 'D6 从 2780m 猛升至 4768m，高反风险大'],
     path: [P.dachaidan, P.golmud, P.kunlunPass, P.hohxil, P.kunlunPass, P.golmud, P.dachaidan, P.dangjinshan, P.aksai, P.dunhuang],
-    stops: [
-      { name: '格尔木', coord: P.golmud },
-      { name: '昆仑山口', coord: P.kunlunPass },
-      { name: '可可西里', coord: P.hohxil },
-    ],
-    replacesDays: [6, 7],
   },
 ]
 
-export const TOTAL_MILEAGE = DAYS.reduce((sum, d) => sum + d.mileageKm, 0)
+export function totalMileage(days: DayPlan[]): number {
+  return days.reduce((sum, d) => sum + d.mileageKm, 0)
+}
+
+/** 根据到家日期推算休息说明（假期到 10/7 结束） */
+export function restNote(days: DayPlan[]): string {
+  const last = days[days.length - 1]
+  const homeDay = Number(last.date.split('/')[1])
+  if (homeDay >= 7) return '假期结束'
+  return `10/${homeDay + 1}-10/7 在家休息`
+}
 
 export const KEY_TIPS = [
   '莫高窟 9/28 门票：立即在"莫高窟参观预约网"小程序查 A 类票，抢不到则 9/27 线上抢 B 类应急票',

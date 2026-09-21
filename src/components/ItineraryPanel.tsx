@@ -1,11 +1,17 @@
 import { useEffect, useRef } from 'react'
-import { DAYS, PHASE_META, TOTAL_MILEAGE, type DayPlan } from '../data/itinerary'
-import type { OptionId } from './TripMap'
+import {
+  PHASE_META,
+  restNote,
+  totalMileage,
+  type DayPlan,
+  type RouteOption,
+} from '../data/itinerary'
 
 interface ItineraryPanelProps {
+  days: DayPlan[]
+  option: RouteOption
   selectedDay: number | null
   onSelectDay: (day: number | null) => void
-  optionId: OptionId
 }
 
 function DayCard({
@@ -72,7 +78,12 @@ function DayCard({
   )
 }
 
-export default function ItineraryPanel({ selectedDay, onSelectDay, optionId }: ItineraryPanelProps) {
+export default function ItineraryPanel({
+  days,
+  option,
+  selectedDay,
+  onSelectDay,
+}: ItineraryPanelProps) {
   const cardRefs = useRef<Record<number, HTMLButtonElement | null>>({})
 
   useEffect(() => {
@@ -80,20 +91,18 @@ export default function ItineraryPanel({ selectedDay, onSelectDay, optionId }: I
     cardRefs.current[selectedDay]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [selectedDay])
 
+  const lastDay = days[days.length - 1]
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="shrink-0 border-b border-slate-100 px-3 py-2 text-xs text-slate-500">
-        全程 15 天 · 约 {TOTAL_MILEAGE}km · 10/6-10/7 在家休息
-        {(optionId === 'B' || optionId === 'C') && (
-          <div className="mt-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] text-slate-600">
-            地图正在预览方案 {optionId}，以下行程单仍为主方案 A
-          </div>
-        )}
+        {option.name}｜全程 {days.length} 天 · 约 {totalMileage(days)}km · {lastDay.date} 到家 ·{' '}
+        {restNote(days)}
       </div>
       <div className="flex-1 space-y-2 overflow-y-auto p-3">
-        {DAYS.map((day) => (
+        {days.map((day) => (
           <DayCard
-            key={day.day}
+            key={`${option.id}-${day.day}`}
             day={day}
             selected={selectedDay === day.day}
             onSelect={() => onSelectDay(selectedDay === day.day ? null : day.day)}

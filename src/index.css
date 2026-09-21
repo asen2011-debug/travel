@@ -33,6 +33,22 @@ body {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
+/* 同城多晚住宿：胶囊形标记 */
+.lodging-marker-multi {
+  width: 42px;
+  border-radius: 13px;
+  font-size: 11px;
+  letter-spacing: -0.5px;
+}
+
+.lodging-marker.selected,
+.home-marker.selected {
+  box-shadow:
+    0 0 0 3px rgba(37, 99, 235, 0.4),
+    0 1px 4px rgba(0, 0, 0, 0.35);
+  transform: scale(1.1);
+}
+
 .home-marker {
   width: 30px;
   height: 30px;

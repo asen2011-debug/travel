@@ -1,5 +1,4 @@
-import { ROUTE_OPTIONS } from '../data/itinerary'
-import type { OptionId } from './TripMap'
+import { ROUTE_OPTIONS, type OptionId } from '../data/itinerary'
 
 interface OptionSwitchProps {
   optionId: OptionId
