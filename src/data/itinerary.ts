@@ -34,8 +34,118 @@ export interface RouteOption {
   pros: string[]
   cons: string[]
   recommended?: boolean
+  /** 对比表字段 */
+  compare: {
+    scenery: string
+    maxLodging: string
+    crowd: string
+    intensity: string
+    verdict: string
+  }
   /** 对比虚线路径（从西宁到家） */
   path: Coord[]
+}
+
+export type Urgency = 'today' | 'high' | 'normal'
+
+export interface BookingItem {
+  name: string
+  date: string
+  channel?: string
+  price?: string
+  urgency: Urgency
+  reason: string
+}
+
+/** 需要立即预定的门票 */
+export const TICKETS: BookingItem[] = [
+  {
+    name: '兵马俑',
+    date: '9/21 下午参观',
+    channel: '秦始皇帝陵博物院小程序',
+    price: '120元/人',
+    urgency: 'today',
+    reason: '今天用，现在约',
+  },
+  {
+    name: '莫高窟 B 类应急票',
+    date: '9/27 抢票，9/28 参观',
+    channel: '莫高窟参观预约网小程序',
+    price: '100元/人',
+    urgency: 'today',
+    reason: 'A 类已售罄；B 类线上 6000 张，抢不到则 9/28 早 8 点现场排队（另 6000 张），带身份证',
+  },
+  {
+    name: '其他景区（茶卡/水上雅丹/鸣沙山/嘉峪关/七彩丹霞/拉卜楞寺/扎尕那等）',
+    date: '参观当天或前一天',
+    channel: '各景区官方小程序 / OTA',
+    urgency: 'normal',
+    reason: '不紧张，随走随买',
+  },
+]
+
+/** 需要预定的住宿（按紧俏程度排序） */
+export const LODGINGS: BookingItem[] = [
+  {
+    name: '大柴旦（两晚）',
+    date: '9/24、9/25',
+    urgency: 'today',
+    reason: '中秋小长假 + 小镇接待能力小，全程最紧俏',
+  },
+  {
+    name: '扎尕那',
+    date: '10/2',
+    urgency: 'today',
+    reason: '国庆高峰，民宿少价格翻倍',
+  },
+  {
+    name: '敦煌（两晚）',
+    date: '9/27、9/28',
+    urgency: 'today',
+    reason: '小长假尾巴 + 国庆前奏',
+  },
+  {
+    name: '夏河',
+    date: '10/1',
+    urgency: 'today',
+    reason: '国庆，县城小选择少',
+  },
+  {
+    name: '西宁',
+    date: '9/30',
+    urgency: 'today',
+    reason: '国庆前夜',
+  },
+  {
+    name: '格尔木',
+    date: '9/26',
+    urgency: 'high',
+    reason: '不算紧张，提前订便宜',
+  },
+  {
+    name: '茶卡',
+    date: '9/23',
+    urgency: 'high',
+    reason: '相对宽裕',
+  },
+  {
+    name: '陇南',
+    date: '10/3',
+    urgency: 'normal',
+    reason: '城市酒店多，可后订',
+  },
+  {
+    name: '西安',
+    date: '10/4',
+    urgency: 'normal',
+    reason: '城市酒店多，可后订',
+  },
+]
+
+export const URGENCY_META: Record<Urgency, { label: string; className: string }> = {
+  today: { label: '今天必办', className: 'bg-red-50 text-red-600' },
+  high: { label: '尽快', className: 'bg-amber-50 text-amber-700' },
+  normal: { label: '可后订', className: 'bg-slate-100 text-slate-500' },
 }
 
 export const PHASE_META: Record<Phase, { label: string; color: string }> = {
@@ -533,6 +643,13 @@ export const ROUTE_OPTIONS: RouteOption[] = [
       '青藏高原东北缘：草原、峡谷、藏寨、寺庙，与环线的盐湖戈壁沙漠丹霞完全不同，与去程零重复。海拔 2000-3500m，不深入藏区。10/5 到家，10/6-7 休息。',
     pros: ['风景类型与环线互补', '与去程零重复', '5 天从容，含 2 天纯赶路', '海拔相对温和'],
     cons: ['扎尕那国庆住宿紧张需早订', '迭部—陇南段山路弯多'],
+    compare: {
+      scenery: '草原峡谷藏寨寺庙',
+      maxLodging: '3,000m（扎尕那）',
+      crowd: '扎尕那较挤',
+      intensity: '中',
+      verdict: '风景与轻松的均衡之选',
+    },
     path: [P.xining, P.tongren, P.xiahe, P.sangke, P.gahai, P.langmusi, P.diebu, P.zhagana, P.lazikou, P.dangchang, P.longnan, P.chengxian, P.tianshui, P.baoji, P.xian, P.luoyang, P.home],
   },
   {
@@ -544,6 +661,13 @@ export const ROUTE_OPTIONS: RouteOption[] = [
       '经若尔盖草原、九曲黄河第一湾、成都返程。能顺路进成都，但回程多约 500km，且 D14/D15 两天驾驶强度很大；10 月初草原已枯黄、花湖无花。本次不推荐，适合以后夏季专程走。',
     pros: ['若尔盖草原、九曲黄河第一湾', '可顺路成都吃火锅'],
     cons: ['D14 约 560km 山路 + D15 约 720km 高速，强度大', '10 月初草原枯黄、花湖无花', '比方案 A 多约 500km'],
+    compare: {
+      scenery: '草原湿地 + 成都',
+      maxLodging: '3,400m（唐克）',
+      crowd: '中等',
+      intensity: '高',
+      verdict: '为成都多花两天力气',
+    },
     path: [P.xining, P.tongren, P.xiahe, P.langmusi, P.ruoergai, P.tangke, P.hongyuan, P.wenchuan, P.chengdu, P.hanzhong, P.xian, P.luoyang, P.home],
   },
   {
@@ -555,6 +679,13 @@ export const ROUTE_OPTIONS: RouteOption[] = [
       '西宁 → 兰州 → 西安 → 家，全程高速且全在免费时段内。10/3 傍晚到家，可在家休息 4 天。完全重复去程，作为恶劣天气、身体不适或时间失控时的兜底方案。',
     pros: ['10/3 到家，在家休息 4 天', '全高速免费，每天不超过 7.5 小时', '路况最熟最省心'],
     cons: ['完全重复去程风景', '无新增景点'],
+    compare: {
+      scenery: '无新景',
+      maxLodging: '1,500m（兰州）',
+      crowd: '不挤',
+      intensity: '低',
+      verdict: '保底安全第一',
+    },
     path: [P.xining, P.lanzhou, P.tianshui, P.baoji, P.xian, P.luoyang, P.home],
   },
   {
@@ -566,6 +697,13 @@ export const ROUTE_OPTIONS: RouteOption[] = [
       '西宁 → 玛沁 → 阿坝 → 成都返程：阿尼玛卿雪山（四大神山）近在咫尺，黄河源高原草甸，国庆最冷门方向，不堵车不排队。海拔比甘南线高（玛沁 3750m），适合想看更原始高原的你们。玉树方向回程需 6-7 天、没有休息日，本次假期装不下，故不作方案。',
     pros: ['国庆最冷门，不堵车住宿不紧张', '阿尼玛卿雪山 + 黄河源高原，风景最"青藏"', '与主方案、甘南线风景都不重复'],
     cons: ['玛沁 3750m 是全程最高住宿点', 'D14/D15 两天驾驶强度大', '果洛段服务设施稀疏，见加油站就加满'],
+    compare: {
+      scenery: '雪山神山高原',
+      maxLodging: '3,750m（玛沁）',
+      crowd: '最冷门',
+      intensity: '高',
+      verdict: '最野最原始的高原',
+    },
     path: [P.xining, P.huashixia, P.animaqing, P.maqen, P.jiuzhi, P.aba, P.hongyuan, P.lixian, P.wenchuan, P.chengdu, P.hanzhong, P.xian, P.luoyang, P.home],
   },
 ]

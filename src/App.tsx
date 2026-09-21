@@ -2,12 +2,16 @@ import { useMemo, useState } from 'react'
 import TripMap from './components/TripMap'
 import ItineraryPanel from './components/ItineraryPanel'
 import OptionSwitch from './components/OptionSwitch'
+import ReferencePanel from './components/ReferencePanel'
 import { ITINERARIES, KEY_TIPS, ROUTE_OPTIONS, type OptionId } from './data/itinerary'
+
+type SidebarTab = 'days' | 'reference'
 
 export default function App() {
   const [optionId, setOptionId] = useState<OptionId>('A')
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
   const [panelOpen, setPanelOpen] = useState(false)
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('days')
 
   const days = useMemo(() => ITINERARIES[optionId], [optionId])
   const option = ROUTE_OPTIONS.find((o) => o.id === optionId) ?? ROUTE_OPTIONS[0]
@@ -17,15 +21,39 @@ export default function App() {
     setSelectedDay(null)
   }
 
+  const tabs: Array<{ id: SidebarTab; label: string }> = [
+    { id: 'days', label: '逐日行程' },
+    { id: 'reference', label: '对比与预定' },
+  ]
+
   const sidebar = (
     <>
       <OptionSwitch optionId={optionId} onChange={handleOptionChange} />
-      <ItineraryPanel
-        days={days}
-        option={option}
-        selectedDay={selectedDay}
-        onSelectDay={setSelectedDay}
-      />
+      <div className="flex shrink-0 border-b border-slate-200">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setSidebarTab(tab.id)}
+            className={`flex-1 py-2 text-sm font-medium transition-colors ${
+              sidebarTab === tab.id
+                ? 'border-b-2 border-blue-600 text-blue-600'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      {sidebarTab === 'days' ? (
+        <ItineraryPanel
+          days={days}
+          option={option}
+          selectedDay={selectedDay}
+          onSelectDay={setSelectedDay}
+        />
+      ) : (
+        <ReferencePanel />
+      )}
     </>
   )
 
