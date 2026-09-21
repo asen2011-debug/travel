@@ -9,4 +9,9 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 4731,
   },
+  preview: {
+    host: '0.0.0.0',
+    port: 4732,
+    allowedHosts: ['.loca.lt'],
+  },
 })
