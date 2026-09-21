@@ -35,7 +35,7 @@ export default function App() {
         <div className="flex flex-wrap items-baseline gap-x-3">
           <h1 className="text-lg font-bold">青甘大环线自驾路线图</h1>
           <span className="text-sm text-slate-500">
-            2026 婚假之旅 · 9/21 获嘉亢村出发 — 10/5 到家 · 两人轮换驾驶
+            2026 婚假之旅 · 9/20 获嘉亢村出发 — 10/4 到家 · 两人轮换驾驶
           </span>
         </div>
         <div className="mt-1.5 flex gap-2 overflow-x-auto pb-0.5">

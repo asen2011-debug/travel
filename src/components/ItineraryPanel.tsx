@@ -51,6 +51,11 @@ function DayCard({
             {day.holiday}
           </span>
         )}
+        {day.done && (
+          <span className="rounded-full bg-green-50 px-1.5 py-0.5 text-[10px] font-medium text-green-600">
+            已完成
+          </span>
+        )}
         <span className="ml-auto shrink-0 text-xs text-slate-400">
           {day.mileageKm}km · {day.driveHours}h
         </span>
